@@ -6,17 +6,9 @@ from geometry_msgs.msg import Vector3
 from math import fabs
 from tf.transformations import quaternion_from_euler
 from tf.transformations import quaternion_multiply
+from tf.transformations import quaternion_inverse
+from tf.transformations import euler_from_quaternion
 from collections import deque
-
-# Internally uses tf notation for vectors and quaternions, that is, they are
-# array like. Vectors are [x,y,z] and quaternions are [x,y,z,w]
-# Input is in rosmsg
-
-# TODO: Linear velocity not correct.
-# Linear velocity is much more correct when vrpn_client_ros uses server time
-# rather than client time
-# Linear velocity can be made much smoother with a windowed running average as
-# well
 
 def Vector3Array(x, y, z):
     """
@@ -72,7 +64,6 @@ class RigidBody:
         Three dimensional vector array of linear velocity of rigid body
     angular_velocity : Vector3Array
         Three dimensional vector array of angular velocity of rigid body
-        NOT IMPLEMENTED YET
     """
     def __init__(self, name=""):
         """
@@ -93,10 +84,12 @@ class RigidBody:
 
         # TODO: Turn into full twist message
         self.position_diff_queue = deque(maxlen=5)
+        self.angular_diff_queue = deque(maxlen=5)
         self.linear_velocity = Vector3Array(0, 0, 0)
         self.angular_velocity = Vector3Array(0, 0, 0)
 
         self.last_timestamp = rospy.Time.now()
+        self.dt = 0.0
 
     def input_pose_msg(self, pose):
         """
@@ -120,29 +113,59 @@ class RigidBody:
                 pose.pose.orientation.z,
                 pose.pose.orientation.w)
 
+        self._calculate_dt()
         self._calculate_linear_velocity()
+        self._calculate_angular_velocity()
 
         self.last_timestamp = self.pose_msg.header.stamp
         self.last_pose_msg = self.pose_msg
 
+    def _calculate_dt(self):
+        self.dt = (self.pose_msg.header.stamp - self.last_timestamp).to_sec()
+
     def _calculate_linear_velocity(self):
-        dt = (self.pose_msg.header.stamp - self.last_timestamp).to_sec()
         pos_diff = Vector3Array(
                 self.pose_msg.pose.position.x - self.last_pose_msg.pose.position.x,
                 self.pose_msg.pose.position.y - self.last_pose_msg.pose.position.y,
                 self.pose_msg.pose.position.z - self.last_pose_msg.pose.position.z)
 
-        self.position_diff_queue.append((pos_diff, dt))
+        self.position_diff_queue.append((pos_diff, self.dt))
 
         self.linear_velocity = Vector3Array(0, 0, 0)
         for item in self.position_diff_queue:
-            self.linear_velocity[0] += item[0][0] / item[1]
-            self.linear_velocity[1] += item[0][1] / item[1]
-            self.linear_velocity[2] += item[0][2] / item[1]
+            if item[1] != 0.0:
+                self.linear_velocity[0] += item[0][0] / item[1]
+                self.linear_velocity[1] += item[0][1] / item[1]
+                self.linear_velocity[2] += item[0][2] / item[1]
 
         self.linear_velocity[0] /= len(self.position_diff_queue)
         self.linear_velocity[1] /= len(self.position_diff_queue)
         self.linear_velocity[2] /= len(self.position_diff_queue)
+
+    def _calculate_angular_velocity(self):
+        previous_orientation = QuaternionArray(
+                self.last_pose_msg.pose.orientation.x,
+                self.last_pose_msg.pose.orientation.y,
+                self.last_pose_msg.pose.orientation.z,
+                self.last_pose_msg.pose.orientation.w)
+
+        # Calculate difference in orientation between previous and current position as a quaternion.
+        diff_quat = quaternion_multiply(quaternion_inverse(previous_orientation), self.orientation)
+
+        diff_euler = [i for i in euler_from_quaternion(diff_quat)]
+
+        self.angular_diff_queue.append((diff_euler, self.dt))
+
+        self.angular_velocity = Vector3Array(0, 0, 0)
+        for item in self.angular_diff_queue:
+            if item[1] != 0.0:
+                self.angular_velocity[0] += item[0][0] / item[1]
+                self.angular_velocity[1] += item[0][1] / item[1]
+                self.angular_velocity[2] += item[0][2] / item[1]
+
+        self.angular_velocity[0] /= len(self.angular_diff_queue)
+        self.angular_velocity[1] /= len(self.angular_diff_queue)
+        self.angular_velocity[2] /= len(self.angular_diff_queue)
 
     def within_box(self, box_center, box_dimensions):
         """
@@ -217,14 +240,8 @@ class RigidBody:
             Difference between rigid bodies orientation and inputted orientation
         """
 
-        inverted = QuaternionArray(
-                -self.orientation[0],
-                -self.orientation[1],
-                -self.orientation[2],
-                self.orientation[3])
+        inverted = quaternion_inverse(self.orientation)
 
-        # quaternion_multiply uses tf representation so quaternions are
-        # represented as a vector of [x, y, z, w]
         return quaternion_multiply(desired_orientation, inverted)
 
 
@@ -268,6 +285,16 @@ class RigidBody:
         """
         return self.linear_velocity
 
+    def get_angular_velocity(self):
+        """
+        Returns rigid body angular velocity.
+
+        Returns
+        -------
+        angular_velocity : Vector3Array
+        """
+        return self.angular_velocity
+
     def get_position_msg(self):
         """
         Returns rigid body position as ros msg.
@@ -297,3 +324,23 @@ class RigidBody:
         linear_velocity : geometry_msgs.msgs.Vector3
         """
         return Vector3(*self.linear_velocity)
+
+    def get_angular_velocity_msg(self):
+        """
+        Returns rigid body angular velocity as ros msg.
+
+        Returns
+        -------
+        angular_velocity : geometry_msgs.msgs.Vector3
+        """
+        return Vector3(*self.angular_velocity)
+
+    def get_dt(self):
+        """
+        Return dt
+
+        Returns
+        -------
+        dt : double
+        """
+        return self.dt
