@@ -1,5 +1,6 @@
 import rospy
 from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import TwistStamped
 from geometry_msgs.msg import Point
 from geometry_msgs.msg import Quaternion
 from geometry_msgs.msg import Vector3
@@ -67,8 +68,7 @@ class RigidBody:
     """
     def __init__(self, name=""):
         """
-        Convenience function for creating a 3 dimensional vector with an array-like
-        format.
+        Initialization for named rigid body
 
         Parameters
         ----------
@@ -78,7 +78,9 @@ class RigidBody:
 
         self.name = name
         self.last_pose_msg = PoseStamped()
+        self.last_twist_msg = PoseStamped()
         self.pose_msg = PoseStamped()
+        self.twist_msg = TwistStamped()
         self.position = Vector3Array(0, 0, 0)
         self.orientation = QuaternionArray(0, 0, 0, 1)
 
@@ -117,8 +119,13 @@ class RigidBody:
         self._calculate_linear_velocity()
         self._calculate_angular_velocity()
 
+        self.twist_msg.header = self.pose_msg.header
+        self.twist_msg.twist.linear = Vector3(*self.linear_velocity)
+        self.twist_msg.twist.angular = Vector3(*self.angular_velocity)
+
         self.last_timestamp = self.pose_msg.header.stamp
         self.last_pose_msg = self.pose_msg
+        self.last_twist_msg = self.twist_msg
 
     def _calculate_dt(self):
         self.dt = (self.pose_msg.header.stamp - self.last_timestamp).to_sec()
@@ -255,6 +262,16 @@ class RigidBody:
         """
         return self.pose_msg
 
+    def get_twist_msg(self):
+        """
+        Returns last received twist msg.
+
+        Returns
+        -------
+        twist : geometry_msgs.msgs.Twist
+        """
+        return self.twist_msg
+
     def get_position(self):
         """
         Returns rigid body position.
@@ -341,6 +358,6 @@ class RigidBody:
 
         Returns
         -------
-        dt : double
+        dt : float
         """
         return self.dt
