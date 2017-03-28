@@ -1,10 +1,11 @@
-from path_utils import *
+from path_plotter import *
+from path_utilities import *
 
 class Path2D:
-    def __init__(self, max_segment_length):
+    def __init__(self, max_segment_length, origin=None):
         self.path = []
+        self.origin = origin
         self.max_segment_length = max_segment_length
-        self.offset = [0.0, 0.0, 0.0]
 
     def add_point(self, pt):
         # Check if added line seg is longer than max segment length
@@ -29,6 +30,14 @@ class Path2D:
             outfile.write(line)
 
         outfile.close()
+
+    def draw_base_path(self):
+        self.p = PathPlotter(self.path)
+        self.p.draw_base_path()
+
+    def draw_robot_location(self, location):
+        self.p.add_robot_location(location)
+        self.p.draw_robot_path()
 
     def open_path(self, filename):
         outfile = open(filename, 'r')

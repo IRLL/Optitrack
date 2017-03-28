@@ -1,15 +1,18 @@
 import rospy
-from geometry_msgs.msg import PoseStamped
-from geometry_msgs.msg import TwistStamped
-from geometry_msgs.msg import Point
-from geometry_msgs.msg import Quaternion
-from geometry_msgs.msg import Vector3
-from math import fabs
-from tf.transformations import quaternion_from_euler
-from tf.transformations import quaternion_multiply
-from tf.transformations import quaternion_inverse
-from tf.transformations import euler_from_quaternion
+
 from collections import deque
+from math import fabs
+
+from geometry_msgs.msg import Point
+from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import Quaternion
+from geometry_msgs.msg import TwistStamped
+from geometry_msgs.msg import Vector3
+
+from tf.transformations import euler_from_quaternion
+from tf.transformations import quaternion_from_euler
+from tf.transformations import quaternion_inverse
+from tf.transformations import quaternion_multiply
 
 def Vector3Array(x, y, z):
     """
@@ -84,7 +87,6 @@ class RigidBody:
         self.position = Vector3Array(0, 0, 0)
         self.orientation = QuaternionArray(0, 0, 0, 1)
 
-        # TODO: Turn into full twist message
         self.position_diff_queue = deque(maxlen=5)
         self.angular_diff_queue = deque(maxlen=5)
         self.linear_velocity = Vector3Array(0, 0, 0)
@@ -92,6 +94,7 @@ class RigidBody:
 
         self.last_timestamp = rospy.Time.now()
         self.dt = 0.0
+        self.new_pose = False
 
     def input_pose_msg(self, pose):
         """
@@ -103,6 +106,7 @@ class RigidBody:
             ROS Pose msg of rigid body
         """
         self.pose_msg = pose
+        self.new_pose = True
 
         self.position = Vector3Array(
                 pose.pose.position.x,
@@ -173,6 +177,9 @@ class RigidBody:
         self.angular_velocity[0] /= len(self.angular_diff_queue)
         self.angular_velocity[1] /= len(self.angular_diff_queue)
         self.angular_velocity[2] /= len(self.angular_diff_queue)
+
+    def has_new_pose(self):
+        return self.new_pose
 
     def within_box(self, box_center, box_dimensions):
         """

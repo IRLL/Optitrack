@@ -11,12 +11,13 @@ from geometry_msgs.msg import Pose
 from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Quaternion
 from geometry_msgs.msg import Vector3
-from optitrack_utils import *
+
+from utilities.optitrack_utilities import *
 
 def main(parser):
-    rospy.init_node("OptitrackUtils")
+    rospy.init_node("republish_rigid_bodies")
 
-    opti_utils = OptitrackUtils(parser.names, parser.republish_pose,
+    opti_utils = OptitrackUtilities(parser.names, parser.republish_pose,
             parser.republish_twist, parser.republish_rate)
 
     rospy.spin()

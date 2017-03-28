@@ -1,10 +1,10 @@
 import rospy
+
 from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import TwistStamped
-
 from rigid_body import *
 
-class OptitrackUtils:
+class OptitrackUtilities:
     """
     Used in conjunction with vrpn_client_ros to receive and store rigid body
     data that is being published.

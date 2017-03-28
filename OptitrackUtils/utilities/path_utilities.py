@@ -1,10 +1,8 @@
-#!/usr/bin/env python
-
 path_threshold = 0.00001
 threshold = 0.0001
 
 def bisect_line(p1, p2):
-    return ((p1[0] + p2[0]) / 2.0, (p1[1] + p2[1]) / 2.0)
+    return [(p1[0] + p2[0]) / 2.0, (p1[1] + p2[1]) / 2.0]
 
 def euclid_distance(p1, p2):
     return (((p1[0] - p2[0]) ** 2) + ((p1[1] - p2[1]) ** 2)) ** 0.5
