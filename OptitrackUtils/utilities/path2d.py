@@ -1,44 +1,78 @@
+import copy
+
 from path_plotter import *
+from optitrack_utilities import OptitrackUtilities
 from path_utilities import *
 
 class Path2D:
-    def __init__(self, max_segment_length, origin=None):
+    def __init__(self, filename=None, origin_name=None):
         self.path = []
-        self.origin = origin
-        self.max_segment_length = max_segment_length
+        self.filename = filename
+        self.origin_name = origin_name
+        self.origin_rb = None
 
-    def add_point(self, pt):
-        # Check if added line seg is longer than max segment length
-        if len(self.path) > 0:
-            seg_length = euclid_distance(self.path[-1], pt)
-            print "seg_length: ",
-            print seg_length
-            if seg_length > self.max_segment_length:
-                mid = bisect_line(self.path[-1], pt)
-                self.add_point(mid)
-                self.add_point(pt)
-            else:
-                self.path.append(pt)
-        else:
-            self.path.append(pt)
+        if self.filename:
+            self.open_path(filename)
 
-    def save_path(self, filename):
-        outfile = open(filename, 'w')
+        if self.origin_name:
+            self.set_origin_name(self.origin_name)
 
-        for p in self.path:
-            line = str(p[0]) + "," + str(p[1]) + "\n"
-            outfile.write(line)
+    def set_origin_name(self, name):
+        if name:
+            self.origin_name = name
+            self.opti_utils = OptitrackUtilities([name])
+            self.origin_rb = self.opti_utils.get_rigid_body(name)
+
+    def open_path(self, filename):
+        print "open_path"
+        print "filename",
+        print filename
+        outfile = open(filename, 'r')
+
+        origin_name = outfile.readline()
+        print "origin_name",
+        print origin_name
+
+        if origin_name != "''":
+            self.set_origin_name(origin_name[1:-2])
+
+        for line in outfile.readlines():
+            pts = line.split(",")
+            self.path.append( [float(pts[0]), float(pts[1])] )
 
         outfile.close()
 
-    def draw_base_path(self):
-        self.p = PathPlotter(self.path)
-        self.p.draw_base_path()
+    def plot(self):
+        plotter = PathPlotter()
+        plotter.input_base_path(self.path)
+        plotter.draw(block=True)
 
-    def draw_robot_location(self, location):
-        self.p.add_robot_location(location)
-        self.p.draw_robot_path()
+    def add_point(self, pt):
+        if self.origin_rb:
+            pos = self.origin_rb.get_position()[0:2]
+            pt[0] -= pos[0]
+            pt[1] -= pos[1]
 
+        self.path.append(pt)
+
+    def get_path(self):
+        return copy.copy(self.path)
+
+    def __repr__(self):
+        string = ""
+        string += "Num Points: " + str(len(self.path)) + "\n"
+        for i, p in enumerate(self.path):
+            string += str(i) + ". " + str(p) + "\n"
+        return string
+
+    def __str__(self):
+        string = ""
+        string += "Num Points: " + str(len(self.path)) + "\n"
+        for i, p in enumerate(self.path):
+            string += str(i) + ". " + str(p) + "\n"
+        return string
+
+    """
     def open_path(self, filename):
         outfile = open(filename, 'r')
 
@@ -56,16 +90,4 @@ class Path2D:
         closest, _ = distance_from_path(location, self.path)
         return closest
 
-    def __repr__(self):
-        string = ""
-        string += "Num Points: " + str(len(self.path)) + "\n"
-        for i, p in enumerate(self.path):
-            string += str(i) + ". " + str(p) + "\n"
-        return string
-
-    def __str__(self):
-        string = ""
-        string += "Num Points: " + str(len(self.path)) + "\n"
-        for i, p in enumerate(self.path):
-            string += str(i) + ". " + str(p) + "\n"
-        return string
+    """

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
+import copy
 import math
 import rospy
 import signal
@@ -14,27 +15,28 @@ from geometry_msgs.msg import Quaternion
 from geometry_msgs.msg import Vector3
 
 from utilities.optitrack_utilities import *
-from utilities.path2d import Path2D
+from utilities.path_creator import PathCreator
+from utilities.path_plotter import PathPlotter
 from utilities.path_utilities import distance_from_path
-
-sys.setrecursionlimit(100)
 
 def main(args):
     rospy.init_node('define_path')
 
-    if args.path_origin:
-        opti_utils = OptitrackUtilities([args.marker_name, args.path_origin])
-        path_origin_rb = opti_utils.get_rigid_body(args.path_origin)
+    if args.origin_name:
+        opti_utils = OptitrackUtilities([args.marker_name, args.origin_name])
+        origin_rigidbody = opti_utils.get_rigid_body(args.origin_name)
         marker = opti_utils.get_rigid_body(args.marker_name)
-        path = Path2D(max_segment_length = args.max_segment_length, origin_rb = path_origin_rb)
+        path = PathCreator(max_segment_length = args.max_segment_length, origin_rb = origin_rigidbody)
 
     else:
         opti_utils = OptitrackUtilities([args.marker_name])
         marker = opti_utils.get_rigid_body(args.marker_name)
-        path = Path2D(max_segment_length = args.max_segment_length)
+        path = PathCreator(max_segment_length = args.max_segment_length)
 
+    plotter = PathPlotter()
+    draw_path = True
     while not rospy.is_shutdown():
-        command_str = "[V]: View Location\n[S]: Save Point\n[Q]: Quit and save path\n[R]: Reset\n[X]: Quit without saving\n[D]: Plot Path\n>> "
+        command_str = "[V]: View Location\n[S]: Save Point\n[Q]: Quit and Save Path\n[R]: Reset\n[X]: Quit Without Saving\n[D]: Toggle Path Plotting\n>> "
         in_str = raw_input(command_str)
 
         if len(in_str) == 0:
@@ -42,8 +44,12 @@ def main(args):
 
         cmd = in_str[0].lower()
 
+        print
+
         if cmd[0] == 'v':
-            print marker.get_position()[0:2]
+            if args.origin_name:
+                print args.origin_name + ": " + str(origin_rigidbody.get_position()[0:2])
+            print args.marker_name + ": " + str(marker.get_position()[0:2])
 
         elif cmd[0] == 's':
             ar_pos = marker.get_position()
@@ -57,13 +63,17 @@ def main(args):
             rospy.signal_shutdown("Path Saved!")
 
         elif cmd[0] == 'r':
-            path = Path2D(parser.max_segment_length)
+            path = PathCreator(parser.max_segment_length)
 
         elif cmd[0] == 'x':
             rospy.signal_shutdown("Path Saved!")
 
         elif cmd[0] == 'd':
-            path.draw_base_path()
+            draw_path = True if not draw_path else False
+
+        if draw_path:
+            plotter.input_base_path(path.get_path())
+            plotter.draw()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Creates a path")
@@ -74,7 +84,7 @@ if __name__ == "__main__":
         default="paths/new_path.path", help="name of path file to create")
     parser.add_argument("--max-segment-length", dest="max_segment_length",
         type=float, default=0.2, help="max length of any segment in path")
-    parser.add_argument("--path-origin", dest="path_origin", type=str,
+    parser.add_argument("--origin-name", dest="origin_name", type=str,
         help="name of rigid body path is placed on")
 
     parser = parser.parse_args()

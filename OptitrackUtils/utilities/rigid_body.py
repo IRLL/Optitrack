@@ -80,6 +80,8 @@ class RigidBody:
         """
 
         self.name = name
+        self.pose_received = False
+
         self.last_pose_msg = PoseStamped()
         self.last_twist_msg = PoseStamped()
         self.pose_msg = PoseStamped()
@@ -94,7 +96,6 @@ class RigidBody:
 
         self.last_timestamp = rospy.Time.now()
         self.dt = 0.0
-        self.new_pose = False
 
     def input_pose_msg(self, pose):
         """
@@ -106,7 +107,7 @@ class RigidBody:
             ROS Pose msg of rigid body
         """
         self.pose_msg = pose
-        self.new_pose = True
+        self.pose_received = True
 
         self.position = Vector3Array(
                 pose.pose.position.x,
@@ -178,9 +179,6 @@ class RigidBody:
         self.angular_velocity[1] /= len(self.angular_diff_queue)
         self.angular_velocity[2] /= len(self.angular_diff_queue)
 
-    def has_new_pose(self):
-        return self.new_pose
-
     def within_box(self, box_center, box_dimensions):
         """
         Checks whether the position of the rigid body is within an inputted box.
@@ -214,7 +212,10 @@ class RigidBody:
 
         return True
 
-    def get_position_error(self, desired_pos):
+    def has_received_message(self):
+        return self.pose_received
+
+    def get_position_difference(self, desired_pos):
         """
         Finds difference between rigid body position and inputted position.
 
@@ -225,22 +226,22 @@ class RigidBody:
 
         Returns
         -------
-        error: Vector3Array
+        difference: Vector3Array
             Difference between rigid bodies position and inputted position
         """
         return [self.position.x - desired_pos[0],
                 self.position.y - desired_pos[1],
                 self.position.z - desired_pos[2]]
 
-    def get_orientation_error(self, desired_orientation):
+    def get_orientation_difference(self, desired_orientation):
         """
         Finds difference between rigid body position and inputted position.
 
         Utilizes the following formula:
 
-        error = desired_orientation * inverse(current_orientation)
+        difference = desired_orientation * inverse(current_orientation)
 
-        where error, desired_orientation, and current_orientation are
+        where difference, desired_orientation, and current_orientation are
         quaternions, and inverse() denotes the quaternion inverse.
 
         Parameters
@@ -250,7 +251,7 @@ class RigidBody:
 
         Returns
         -------
-        error: QuaternionArray
+        difference: QuaternionArray
             Difference between rigid bodies orientation and inputted orientation
         """
 
