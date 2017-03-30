@@ -24,14 +24,9 @@ class Path2D:
             self.origin_rb = self.opti_utils.get_rigid_body(name)
 
     def open_path(self, filename):
-        print "open_path"
-        print "filename",
-        print filename
         outfile = open(filename, 'r')
 
         origin_name = outfile.readline()
-        print "origin_name",
-        print origin_name
 
         if origin_name != "''":
             self.set_origin_name(origin_name[1:-2])

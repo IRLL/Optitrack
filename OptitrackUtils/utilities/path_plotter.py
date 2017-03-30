@@ -10,15 +10,6 @@ from matplotlib.path import Path
 warnings.filterwarnings("ignore", category=matplotlib.cbook.MatplotlibDeprecationWarning)
 warnings.filterwarnings("ignore", category=matplotlib.cbook.mplDeprecation)
 
-"""
-def fxn():
-    warnings.warn("deprecated", matplotlib.cbook.mplDeprecation)
-
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
-    fxn()
-"""
-
 class PathPlotter:
     def __init__(self):
         self.fig = plt.figure()
@@ -31,7 +22,7 @@ class PathPlotter:
         if len(self.base_path) == 0:
             return
 
-        verts = self.base_path
+        verts = copy.copy(self.base_path)
         codes = [Path.MOVETO]
 
         for i in range(len(verts) - 1):
@@ -63,7 +54,7 @@ class PathPlotter:
         if len(self.robot_path) == 0:
             return
 
-        verts = self.robot_path
+        verts = copy.copy(self.robot_path)
         codes = [Path.MOVETO]
 
         for i in range(len(verts) - 1):
@@ -95,3 +86,8 @@ class PathPlotter:
         else:
             plt.draw()
             plt.pause(0.01)
+
+    def save(self, filename):
+        self.input_base_path(self.base_path)
+        self.input_robot_path(self.robot_path)
+        plt.savefig(filename)
