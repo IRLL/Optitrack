@@ -71,23 +71,3 @@ class Path2D:
         for i, p in enumerate(self.path):
             string += str(i) + ". " + str(p) + "\n"
         return string
-
-    """
-    def open_path(self, filename):
-        outfile = open(filename, 'r')
-
-        for line in outfile.readlines():
-            pts = line.split(",")
-            self.add_point( (float(pts[0]), float(pts[1])) )
-
-        outfile.close()
-
-    def find_distance_from_path(self, location):
-        _, distance = distance_from_path(location, self.path)
-        return distance
-
-    def get_closest_path_point(self, location):
-        closest, _ = distance_from_path(location, self.path)
-        return closest
-
-    """

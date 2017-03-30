@@ -17,7 +17,7 @@ from geometry_msgs.msg import Vector3
 from utilities.optitrack_utilities import *
 from utilities.path_creator import PathCreator
 from utilities.path_plotter import PathPlotter
-from utilities.path_utilities import distance_from_path
+from utilities.path_utilities import get_closest_point_and_distance_from_path
 
 def main(args):
     rospy.init_node('define_path')

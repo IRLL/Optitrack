@@ -69,19 +69,19 @@ class OptitrackUtilities:
 
     def _setup_subscribers(self):
         for idx, r in enumerate(self.rigid_body_names):
-            rospy.loginfo("subscribing to topic: /" + self.vrpndatatopic + "/" + r + "/pose")
+            #rospy.loginfo("subscribing to topic: /" + self.vrpndatatopic + "/" + r + "/pose")
             sub = rospy.Subscriber(self.vrpndatatopic + "/" + r + "/pose", PoseStamped, self._pose_callback, (r))
             self.subscribers.append(sub)
 
     def _setup_publishers(self):
         for idx, r in enumerate(self.rigid_body_names):
             if self.republish_pose:
-                rospy.loginfo("publishing to topic: /" + r + "/" + r + "/pose")
+                #rospy.loginfo("publishing to topic: /" + r + "/" + r + "/pose")
                 pub = rospy.Publisher(r + "/pose", PoseStamped, queue_size=1)
                 self.pose_publishers[r] = pub
 
             if self.republish_twist:
-                rospy.loginfo("publishing to topic: /" + r + "/" + r + "/twist")
+                #rospy.loginfo("publishing to topic: /" + r + "/" + r + "/twist")
                 pub = rospy.Publisher(r + "/twist", TwistStamped, queue_size=1)
                 self.twist_publishers[r] = pub
 

@@ -1,8 +1,23 @@
 import copy
+import warnings
+
+import matplotlib.cbook
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 
 from matplotlib.path import Path
+
+warnings.filterwarnings("ignore", category=matplotlib.cbook.MatplotlibDeprecationWarning)
+warnings.filterwarnings("ignore", category=matplotlib.cbook.mplDeprecation)
+
+"""
+def fxn():
+    warnings.warn("deprecated", matplotlib.cbook.mplDeprecation)
+
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    fxn()
+"""
 
 class PathPlotter:
     def __init__(self):
@@ -62,6 +77,17 @@ class PathPlotter:
         #self.robot_subplot.cla()
         #self.robot_subplot.add_patch(self.robot_patch)
         self.base_subplot.add_patch(self.robot_patch)
+
+    def input_closest_point_on_path(self, pt):
+        verts = [pt, self.robot_path[-1]]
+        codes = [Path.MOVETO, Path.LINETO]
+
+        self.mpl_difference_path = Path(verts, codes)
+
+        self.diff_patch = patches.PathPatch(self.mpl_difference_path, edgecolor='red', facecolor='orange', lw=2)
+        self.diff_patch.set_fill(False)
+
+        self.base_subplot.add_patch(self.diff_patch)
 
     def draw(self, block=False):
         if block:

@@ -61,7 +61,7 @@ def recursive_closest_on_path(pt, left, mid, right, iters):
     if right_mid_distance < left_mid_distance:
         return recursive_closest_on_path(pt, mid, right_mid, right, iters + 1)
 
-def distance_from_path(location, path):
+def get_closest_point_and_distance_from_path(location, path):
     """
     print "path: ",
     print path
