@@ -1,32 +1,148 @@
-path_threshold = 0.00001
-threshold = 0.0001
+PATH_THRESHOLD = 0.00001
+DISTANCE_THRESHOLD = 0.0001
 
-def bisect_line(p1, p2):
-    return [(p1[0] + p2[0]) / 2.0, (p1[1] + p2[1]) / 2.0]
+def bisect_line(pt1, pt2):
+    """
+    Finds the middle point of an n-dimensional line defined by its start and
+    end points.
 
-def euclid_distance(p1, p2):
-    return (((p1[0] - p2[0]) ** 2) + ((p1[1] - p2[1]) ** 2)) ** 0.5
+    Parameters
+    ----------
+    pt1 : list of float
+    pt2 : list of float
 
-def check_if_pt_on_line(pt, l1, l2):
-    if abs( (euclid_distance(l1, pt) + euclid_distance(pt, l2)) - euclid_distance(l1, l2)) < path_threshold:
+    Returns
+    -------
+    mid_pt : list of float
+
+    Raises
+    ------
+    ValueError
+        If the dimensions of pt1 do not match pt2 (e.g a 2d point and a 3d
+        point)
+    """
+    if len(pt1) != len(pt2):
+        raise ValueError("Dimensions of pt1 must match dimensions of pt2.")
+
+    return [(pt1[i] + pt2[i]) / 2.0 for i in range(len(pt1))]
+
+def euclid_distance(pt1, pt2):
+    """
+    Finds the euclidian distance between two n-dimensional points.
+
+    Parameters
+    ----------
+    pt1 : list of float
+    pt2 : list of float
+
+    Returns
+    -------
+    distance : float
+
+    Raises
+    ------
+    ValueError
+        If the dimensions of pt1 do not match pt2 (e.g a 2d point and a 3d
+        point)
+    """
+    if len(pt1) != len(pt2):
+        raise ValueError("Dimensions of pt1 must match dimensions of pt2.")
+
+    return sum([(pt1[i] - pt2[i]) ** 2.0 for i in range(len(pt1))]) ** 0.5
+
+def check_if_pt_on_line(pt, line_start, line_end):
+    """
+    Determines if a given point lies along a line defined by its start and end
+    points.
+
+    Parameters
+    ----------
+    pt : list of float
+    line_start : list of float
+    line_end : list of float
+
+    Returns
+    -------
+    is_on_line : bool
+
+    Raises
+    ------
+    ValueError
+        If the dimensions of pt, line_start, and end_point do not match
+    """
+    if len(pt) != len(line_start) or len(pt) != len(line_end):
+        raise ValueError("Dimensions of pt, line_start, and line_end must match")
+
+    if abs((euclid_distance(line_start, pt) + euclid_distance(pt, line_end)) -
+            euclid_distance(line_start, line_end)) < PATH_THRESHOLD:
         return True
-    return False
+    else:
+        return False
 
-def find_closest_point(pt, path):
-    path_index = 0
-    path_point = path[0]
-    min_d = euclid_distance(pt, path[0])
+def find_closest_point(pt, pt_set):
+    """
+    Finds the minimum euclidian distance between a given point and a set of
+    points.
 
-    for i, p in enumerate(path):
+    Parameters
+    ----------
+    pt : list of float
+    pt_set : list of list of points
+
+    Returns
+    -------
+    index : int
+        Index of closest point
+    closest_point : list of float
+        Closest point in set
+
+    Raises
+    ------
+    ValueError
+        If the dimensions of pt, and any point in pt_set do not match.
+    """
+    for p in pt_set:
+        if len(pt) != len(p):
+            raise ValueError("Dimensions of pt must match dimensions of all points in pt_set.")
+
+    index = 0
+    closest_point = pt_set[0]
+    min_d = euclid_distance(pt, pt_set[0])
+
+    for i, p in enumerate(pt_set):
         d = euclid_distance(pt, p)
         if d < min_d:
             min_d = d
-            path_index = i
-            path_point = p
+            index = i
+            closest_point = p
 
-    return path_index, path_point
+    return index, closest_point
 
-def recursive_closest_on_path(pt, left, mid, right, iters):
+def recursive_closest_on_segments(pt, left, mid, right):
+    """
+    Finds the closest point along left and right line segments to a given point
+    by recursively interpolating along the closer line segment.
+
+    Parameters
+    ----------
+    pt : list of float
+    left : list of float
+    mid : list of float
+    right : list of float
+
+    Returns
+    -------
+    closest_point : closest point
+
+    Raises
+    ------
+    ValueError
+        If the dimensions of pt, left, mid, and right do not all match.
+    """
+    for p in [left, mid, right]:
+        if len(pt) != len(p):
+            raise ValueError("Dimensions of pt, left, mid, and right do not match.")
+
     if check_if_pt_on_line(pt, left, mid):
         return pt
     if check_if_pt_on_line(pt, mid, right):
@@ -39,66 +155,51 @@ def recursive_closest_on_path(pt, left, mid, right, iters):
     mid_distance = euclid_distance(pt, mid)
     right_mid_distance = euclid_distance(pt, right_mid)
 
-    """
-    print "left_mid_distance: ",
-    print left_mid_distance
-    print "mid_distance: ",
-    print mid_distance
-    print "right_mid_distance: ",
-    print right_mid_distance
-    print
-    """
-
-    if abs(mid_distance - left_mid_distance) < threshold and abs(mid_distance - right_mid_distance) < threshold:
+    if abs(mid_distance - left_mid_distance) < DISTANCE_THRESHOLD and \
+    abs(mid_distance - right_mid_distance) < DISTANCE_THRESHOLD:
         return bisect_line(left_mid, right_mid)
 
     if mid_distance < left_mid_distance and mid_distance < right_mid_distance:
-        return recursive_closest_on_path(pt, bisect_line(left_mid, mid), mid, bisect_line(mid, right_mid), iters + 1)
+        return recursive_closest_on_segments(pt, bisect_line(left_mid, mid),
+                mid, bisect_line(mid, right_mid))
 
     if left_mid_distance <= right_mid_distance:
-        return recursive_closest_on_path(pt, left, left_mid, mid, iters + 1)
+        return recursive_closest_on_segments(pt, left, left_mid, mid)
 
     if right_mid_distance < left_mid_distance:
-        return recursive_closest_on_path(pt, mid, right_mid, right, iters + 1)
+        return recursive_closest_on_segments(pt, mid, right_mid, right)
 
-def get_closest_point_and_distance_from_path(location, path):
+def get_closest_point_and_distance_from_path(pt, path):
     """
-    print "path: ",
-    print path
-    print "location: ",
-    print location
-    """
+    Uses recursive_closest_on_segments to find the closest point along an
+    entire path to a given point.
 
-    idx, closest_point = find_closest_point(location, path)
+    Parameters
+    ----------
+    pt : list of float
+    path : list of list of float
+
+    Returns
+    -------
+    closest_on_path : list of float
+    distance : float
+
+    Raises
+    ------
+    ValueError
+        If the dimensions of pt, and any point in path do not match.
     """
-    print "idx: ",
-    print idx
-    print "closest_point: ",
-    print closest_point
-    """
+    for p in path:
+        if len(pt) != len(p):
+            raise ValueError("Dimensions of pt must match dimensions of all points in path.")
+
+    idx, closest_point = find_closest_point(pt, path)
 
     left_idx = (idx - 1) % len(path)
     right_idx = (idx + 1) % len(path)
-    left_pt = path[left_idx]
-    right_pt = path[right_idx]
-    """
-    print "mid_pt: ",
-    print closest_point
-    print "left_pt: ",
-    print left_pt
-    print "right_pt: ",
-    print right_pt
-    print
-    """
 
-    closest_on_path = recursive_closest_on_path(location, path[left_idx], closest_point, path[right_idx], 0)
-    distance = euclid_distance(location, closest_on_path)
-
-    """
-    print "closest_on_path: ",
-    print closest_on_path
-    print "distance_from_path: ",
-    print distance
-    """
+    closest_on_path = recursive_closest_on_segments(pt, path[left_idx],
+            closest_point, path[right_idx])
+    distance = euclid_distance(pt, closest_on_path)
 
     return closest_on_path, distance
