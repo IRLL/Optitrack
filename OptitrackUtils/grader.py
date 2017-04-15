@@ -5,23 +5,27 @@ import rospy
 import signal
 import sys
 
-from utilities.path2d import *
-from utilities.engr120_grader import *
-
+from optitrack_utilities.optitrack_bridge import OptitrackBridge
+from optitrack_utilities.engr120 import ENGR120Grader
+from optitrack_utilities.path import PathPlotter, Path2D
+from optitrack_utilities.path.path_utilities import *
 
 global base_path
 global robot_path
 global plotter
-global parser
+global args
 
 def handler(signum, frame):
+    global base_path
+    global robot_path
     global plotter
-    global parser
+    global args
 
-    g = ENGR120_Grader(base_path.get_path(), robot_path.get_path())
-    g.grade()
+    grader = ENGR120Grader(base_path, robot_path, args.student_name)
+    grader.grade()
 
-    plotter.save(parser.results_filename)
+    if args.graph_output_filename:
+        plotter.save(args.graph_output_filename)
 
     rospy.signal_shutdown("exit")
     sys.exit(0)
@@ -30,30 +34,33 @@ def main():
     global base_path
     global robot_path
     global plotter
-    global parser
+    global args
 
-    rospy.init_node('open_path')
+    rospy.init_node('engr120_grader')
 
     signal.signal(signal.SIGINT, handler)
 
-    base_path = Path2D(filename=parser.path_filename)
-    robot_path = Path2D(origin_name=parser.origin_name)
+    robot_path = Path2D()
+    base_path = Path2D()
+
+    robot_path.set_origin_name(args.origin_name)
+    base_path.open_path(args.path_filename)
 
     plotter = PathPlotter()
 
-    opti_utils = OptitrackUtilities([parser.robot_name])
-    robot = opti_utils.get_rigid_body(parser.robot_name)
+    opti_utils = OptitrackBridge([args.robot_name])
+    robot = opti_utils.get_rigid_body(args.robot_name)
 
-    r = rospy.Rate(100.0)
+    r = rospy.Rate(5.0)
     while not rospy.is_shutdown():
-        if robot.has_received_message():
+        if robot.has_received_pose():
             pos = robot.get_position()
             robot_path.add_point(pos[0:2])
 
-            closest_on_path, distance = get_closest_point_and_distance_from_path(robot_path.get_path()[-1], base_path.get_path())
+            closest_on_path, distance = get_closest_point_and_distance_from_path(robot_path[-1], base_path)
 
-            plotter.input_base_path(base_path.get_path())
-            plotter.input_robot_path(robot_path.get_path())
+            plotter.input_base_path(base_path)
+            plotter.input_robot_path(robot_path)
             plotter.input_closest_point_on_path(closest_on_path)
 
             plotter.draw()
@@ -61,18 +68,23 @@ def main():
         r.sleep()
 
 if __name__ == "__main__":
-    global parser
-    parser = argparse.ArgumentParser(description="Grade ENGR120")
+    global args
 
-    parser.add_argument("--robot-name", dest="robot_name", type=str,
-        default="PathMarker", help="name of robot rigid body")
-    parser.add_argument("--path-filename", dest="path_filename", type=str,
-        default="paths/table.path", help="name of path file to open")
-    parser.add_argument("--path-results-filename", dest="results_filename", type=str,
-        default="plots/new_plot.png", help="name of file to save grade to")
-    parser.add_argument("--origin-name", dest="origin_name", type=str,
-        default="TableCenter", help="name of rigid body path is placed on")
+    args = argparse.ArgumentParser(description="Grade ENGR120")
 
-    parser = parser.parse_args()
+    args.add_argument("robot_name", type=str, help="Name of robot rigid body.")
+    args.add_argument("origin_name", type=str, help="Name of rigid body path is placed on.")
+    args.add_argument("path_filename", type=str, help="Name of path file to open.")
+    args.add_argument("--student-name", dest="student_name", type=str, help="Name of student or team.")
+    args.add_argument("--graph-output-filename", dest="graph_output_filename", type=str, help="Name of png file to save graph of run to. If student name is defined it will be prepended to graph output name.")
+
+    args = args.parse_args()
+
+    if args.graph_output_filename:
+        if args.graph_output_filename[-4:] != ".png":
+            args.graph_output_filename += ".png"
+
+        if args.student_name:
+            args.graph_output_filename = args.student_name + "_" + args.graph_output_filename
 
     main()

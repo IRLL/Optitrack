@@ -2,9 +2,11 @@ import rospy
 
 from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import TwistStamped
-from rigid_body import *
 
-class OptitrackUtilities:
+from rigid_body import RigidBody
+
+class OptitrackBridge:
+    rigid_bodies = {}
     """
     Used in conjunction with vrpn_client_ros to receive and store rigid body
     data that is being published.
@@ -36,7 +38,10 @@ class OptitrackUtilities:
         self.subscribers = []
         self.pose_publishers = {}
         self.twist_publishers = {}
-        self.rigid_body_names = rigid_body_names
+        if isinstance(rigid_body_names, str):
+            self.rigid_body_names = [rigid_body_names]
+        else:
+            self.rigid_body_names = rigid_body_names
         self.vrpndatatopic = 'vrpn_client_node'
 
         self.republish_pose = republish_pose
@@ -44,13 +49,13 @@ class OptitrackUtilities:
         self.republish_rate = republish_rate
         self.next_republish_time = rospy.Time.now().to_sec()
 
-        self.rigid_bodies = {}
-        for name in self.rigid_body_names:
-            rb = RigidBody(name)
-            self.rigid_bodies[name] = rb
-
         self._setup_subscribers()
         self._setup_publishers()
+
+        for name in self.rigid_body_names:
+            if name not in self.rigid_bodies:
+                rb = RigidBody(name)
+                self.rigid_bodies[name] = rb
 
     def _pose_callback(self, pose, name):
         self.rigid_bodies[name].input_pose_msg(pose)
@@ -69,21 +74,23 @@ class OptitrackUtilities:
 
     def _setup_subscribers(self):
         for idx, r in enumerate(self.rigid_body_names):
-            #rospy.loginfo("subscribing to topic: /" + self.vrpndatatopic + "/" + r + "/pose")
-            sub = rospy.Subscriber(self.vrpndatatopic + "/" + r + "/pose", PoseStamped, self._pose_callback, (r))
-            self.subscribers.append(sub)
+            if r not in self.rigid_bodies:
+                #rospy.loginfo("subscribing to topic: /" + self.vrpndatatopic + "/" + r + "/pose")
+                sub = rospy.Subscriber(self.vrpndatatopic + "/" + r + "/pose", PoseStamped, self._pose_callback, (r))
+                self.subscribers.append(sub)
 
     def _setup_publishers(self):
         for idx, r in enumerate(self.rigid_body_names):
-            if self.republish_pose:
-                #rospy.loginfo("publishing to topic: /" + r + "/" + r + "/pose")
-                pub = rospy.Publisher(r + "/pose", PoseStamped, queue_size=1)
-                self.pose_publishers[r] = pub
+            if r not in self.rigid_bodies:
+                if self.republish_pose:
+                    #rospy.loginfo("publishing to topic: /" + r + "/" + r + "/pose")
+                    pub = rospy.Publisher(r + "/pose", PoseStamped, queue_size=1)
+                    self.pose_publishers[r] = pub
 
-            if self.republish_twist:
-                #rospy.loginfo("publishing to topic: /" + r + "/" + r + "/twist")
-                pub = rospy.Publisher(r + "/twist", TwistStamped, queue_size=1)
-                self.twist_publishers[r] = pub
+                if self.republish_twist:
+                    #rospy.loginfo("publishing to topic: /" + r + "/" + r + "/twist")
+                    pub = rospy.Publisher(r + "/twist", TwistStamped, queue_size=1)
+                    self.twist_publishers[r] = pub
 
     def get_rigid_body(self, name):
         """

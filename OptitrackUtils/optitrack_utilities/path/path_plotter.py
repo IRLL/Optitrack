@@ -17,7 +17,7 @@ class PathPlotter:
         #self.robot_subplot = self.fig.add_subplot(1, 1, 1)
 
     def input_base_path(self, path):
-        self.base_path = copy.copy(path)
+        self.base_path = path[0:]
 
         if len(self.base_path) == 0:
             return
@@ -49,7 +49,7 @@ class PathPlotter:
         #self.robot_subplot.set_ylim(min(ys) - 0.5, max(ys) + 0.5)
 
     def input_robot_path(self, path):
-        self.robot_path = copy.copy(path)
+        self.robot_path = path[0:]
 
         if len(self.robot_path) == 0:
             return

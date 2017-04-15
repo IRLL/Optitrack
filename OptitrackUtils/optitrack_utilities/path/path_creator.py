@@ -1,9 +1,9 @@
 import copy
 
-from path_utilities import *
+from ..path.path_utilities import *
 
 class PathCreator:
-    def __init__(self, origin_rb=None, max_segment_length=1.0, min_segment_length=0.02):
+    def __init__(self, origin_rb = None, max_segment_length = 0.5, min_segment_length = 0.02):
         self.path = []
         self.origin_rb = origin_rb
         self.max_segment_length = max_segment_length

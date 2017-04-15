@@ -14,24 +14,24 @@ from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import Quaternion
 from geometry_msgs.msg import Vector3
 
-from utilities.optitrack_utilities import *
-from utilities.path_creator import PathCreator
-from utilities.path_plotter import PathPlotter
-from utilities.path_utilities import get_closest_point_and_distance_from_path
+from optitrack_utilities.optitrack_bridge import OptitrackBridge
+from optitrack_utilities.path import PathCreator
+from optitrack_utilities.path import PathPlotter
+from optitrack_utilities.path import get_closest_point_and_distance_from_path
 
 def main(args):
     rospy.init_node('define_path')
 
     if args.origin_name:
-        opti_utils = OptitrackUtilities([args.marker_name, args.origin_name])
+        opti_utils = OptitrackBridge([args.marker_name, args.origin_name])
         origin_rigidbody = opti_utils.get_rigid_body(args.origin_name)
         marker = opti_utils.get_rigid_body(args.marker_name)
-        path = PathCreator(max_segment_length = args.max_segment_length, origin_rb = origin_rigidbody)
+        path = PathCreator(origin_rb = origin_rigidbody)
 
     else:
-        opti_utils = OptitrackUtilities([args.marker_name])
+        opti_utils = OptitrackBridge([args.marker_name])
         marker = opti_utils.get_rigid_body(args.marker_name)
-        path = PathCreator(max_segment_length = args.max_segment_length)
+        path = PathCreator()
 
     plotter = PathPlotter()
     draw_path = True
@@ -58,12 +58,12 @@ def main(args):
 
         elif cmd[0] == 'q':
             print "Saved Path: "
-            path.save_path(parser.path_filename)
+            path.save_path(args.path_filename)
             print path
             rospy.signal_shutdown("Path Saved!")
 
         elif cmd[0] == 'r':
-            path = PathCreator(parser.max_segment_length)
+            path = PathCreator(args.max_segment_length)
 
         elif cmd[0] == 'x':
             rospy.signal_shutdown("Path Saved!")
@@ -71,21 +71,16 @@ def main(args):
         elif cmd[0] == 'd':
             draw_path = True if not draw_path else False
 
-        if draw_path:
+        if draw_path and len(path.path):
             plotter.input_base_path(path.get_path())
             plotter.draw()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Creates a path")
 
-    parser.add_argument("--marker-name", dest="marker_name", type=str,
-        default="PathMarker", help="name of rigid body used as path marker")
-    parser.add_argument("--path-filename", dest="path_filename", type=str,
-        default="paths/new_path.path", help="name of path file to create")
-    parser.add_argument("--max-segment-length", dest="max_segment_length",
-        type=float, default=0.2, help="max length of any segment in path")
-    parser.add_argument("--origin-name", dest="origin_name", type=str,
-        help="name of rigid body path is placed on")
+    parser.add_argument("marker_name", type=str, help="Name of rigid body used as path marker.")
+    parser.add_argument("origin_name", type=str, help="Name of rigid body path is placed on.")
+    parser.add_argument("path_filename", type=str, help="Name of path file to create.")
 
     parser = parser.parse_args()
 

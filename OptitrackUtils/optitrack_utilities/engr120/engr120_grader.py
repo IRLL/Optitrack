@@ -1,9 +1,11 @@
-from path_utilities import *
+from ..path.path_utilities import *
 
-class ENGR120_Grader:
-    def __init__(self, base_path, robot_path):
+class ENGR120Grader:
+    def __init__(self, base_path, robot_path, student_name=""):
         self.base_path = base_path
         self.robot_path = robot_path
+        self.student_name = student_name
+
         self.errors = []
 
     def grade(self):
@@ -13,9 +15,13 @@ class ENGR120_Grader:
 
         print
         print "********************************"
+        print "Name: ",
+        print self.student_name
         print "Avg (Absolute) Error (cm): ",
         print sum([abs(i) for i in self.errors]) / len(self.errors)
         print "Standard Deviation (cm): ",
         print (sum([i ** 2 for i in self.errors]) / len(self.errors)) ** 0.5
         print "********************************"
         print
+
+    #def save_grade

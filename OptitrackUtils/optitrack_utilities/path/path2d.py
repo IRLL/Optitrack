@@ -1,26 +1,27 @@
 import copy
 
-from path_plotter import *
-from optitrack_utilities import OptitrackUtilities
-from path_utilities import *
+from ..path.path_plotter import PathPlotter
+from ..optitrack_bridge.optitrack_bridge import OptitrackBridge
+from ..path.path_utilities import *
 
 class Path2D:
-    def __init__(self, filename=None, origin_name=None):
+    """
+    Stores a 2d path of points as a list. The path can be defined using global
+    coordinates or as coordinates defined relative to an origin.
+
+    Attributes
+    ----------
+    path : list of 2d points
+    rigid_bodies : list of RigidBody
+    """
+    def __init__(self):
         self.path = []
-        self.filename = filename
-        self.origin_name = origin_name
         self.origin_rb = None
-
-        if self.filename:
-            self.open_path(filename)
-
-        if self.origin_name:
-            self.set_origin_name(self.origin_name)
 
     def set_origin_name(self, name):
         if name:
             self.origin_name = name
-            self.opti_utils = OptitrackUtilities([name])
+            self.opti_utils = OptitrackBridge([name])
             self.origin_rb = self.opti_utils.get_rigid_body(name)
 
     def open_path(self, filename):
@@ -66,3 +67,19 @@ class Path2D:
         for i, p in enumerate(self.path):
             string += str(i) + ". " + str(p) + "\n"
         return string
+
+    def __iter__(self):
+        for p in self.path:
+            yield p
+
+    def __getitem__(self, val):
+        return self.path[val]
+
+    def __len__(self):
+        return len(self.path)
+
+    def append(self, val):
+        if not isinstance(val, tuple) or not len(val) == 2:
+            raise ValueError("input must be a tuple of length 2")
+
+        self.path.append(val)

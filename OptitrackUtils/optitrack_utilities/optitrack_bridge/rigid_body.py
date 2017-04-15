@@ -179,40 +179,7 @@ class RigidBody:
         self.angular_velocity[1] /= len(self.angular_diff_queue)
         self.angular_velocity[2] /= len(self.angular_diff_queue)
 
-    def within_box(self, box_center, box_dimensions):
-        """
-        Checks whether the position of the rigid body is within an inputted box.
-
-        Parameters
-        ----------
-        box_center : Vector3Array
-            Array of [x, y, z] coordinates of center of the box
-        box_dimensions : Vector3Array
-            Array of [x, y, z] denoting side lengths of the box
-
-        Returns
-        -------
-        within : bool
-            True if rigid body is within inputted box
-        """
-        box_dimensions[0] /= 2.0
-        box_dimensions[1] /= 2.0
-        box_dimensions[2] /= 2.0
-
-        x_width = box_center[0] + box_dimensions[0]
-        y_width = box_center[1] + box_dimensions[1]
-        z_width = box_center[2] + box_dimensions[2]
-
-        if fabs(self.position.x - box_center[0]) > x_width:
-            return False
-        if fabs(self.position.y - box_center[1]) > y_width:
-            return False
-        if fabs(self.position.z - box_center[2]) > z_width:
-            return False
-
-        return True
-
-    def has_received_message(self):
+    def has_received_pose(self):
         return self.pose_received
 
     def get_position_difference(self, desired_pos):
@@ -229,9 +196,9 @@ class RigidBody:
         difference: Vector3Array
             Difference between rigid bodies position and inputted position
         """
-        return [self.position.x - desired_pos[0],
-                self.position.y - desired_pos[1],
-                self.position.z - desired_pos[2]]
+        return [self.position[0] - desired_pos[0],
+                self.position[1] - desired_pos[1],
+                self.position[2] - desired_pos[2]]
 
     def get_orientation_difference(self, desired_orientation):
         """
@@ -369,3 +336,14 @@ class RigidBody:
         dt : float
         """
         return self.dt
+
+    def get_last_timestamp(self):
+        """
+        Return dt
+
+        Returns
+        -------
+        last_timestamp : rospy.Time
+        """
+        return self.last_timestamp
+
